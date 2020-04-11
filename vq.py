@@ -56,19 +56,18 @@ class VQ:
             tf.reduce_sum(flat_inputs**2, 1, keepdims=True) -
             2 * tf.matmul(flat_inputs, embeddings) +
             tf.reduce_sum(embeddings**2, 0, keepdims=True))
-        self.distances=distances
         encoding_indices = tf.argmax(-distances, 1)
         encodings = tf.one_hot(encoding_indices, self.K)
         encoding_indices = tf.reshape(encoding_indices, tf.shape(inputs)[:-1])
         quantized = self.quantize(embeddings,encoding_indices)
         e_k=quantized
 
-        avg_probs=tf.reduce_mean(tf.nn.softmax(distances,axis=-1),0)
-        self.avg_probs=avg_probs
 
         quantized = inputs + tf.stop_gradient(quantized - inputs)
-        perplexity = tf.exp(-avg_probs *
-                                        tf.math.log(avg_probs + 1e-10))
+
+        avg_probs = tf.reduce_mean(encodings,0)
+        perplexity = tf.exp(-tf.reduce_sum(avg_probs *
+                                       tf.math.log(avg_probs + 1e-10)))
 
         commitment_loss = tf.reduce_mean((z_e - tf.stop_gradient(e_k)) ** 2)
         vq_loss = tf.reduce_mean((tf.stop_gradient(z_e) - e_k) ** 2)
